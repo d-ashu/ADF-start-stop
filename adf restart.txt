@@ -1,0 +1,24 @@
+# Log in to Azure using service principal credentials stored in pipeline variables
+$spUsername = "$(SP_USERNAME)"
+$spPassword = "$(SP_PASSWORD)"
+$spTenant = "$(SP_TENANT)"
+az login --service-principal -u $spUsername -p $spPassword --tenant $spTenant
+
+# Define variables
+$resourceGroupName = "ops_analytics-rg-gb-qa"
+$dataFactoryName = "Ops-analytics-gac-product-qa"
+$tempFilePath = "$(Build.ArtifactStagingDirectory)\startedTriggers.txt"
+
+# Read names of started triggers from the file
+$startedTriggerNames = Get-Content -Path $tempFilePath
+
+# Restart previously started triggers at once
+$startedTriggerNames | ForEach-Object {
+    try {
+        Write-Output "Restarting trigger: $_"
+        Start-AzDataFactoryV2Trigger -ResourceGroupName $resourceGroupName -DataFactoryName $dataFactoryName -Name $_ -Force
+        Write-Output "Successfully restarted trigger: $_"
+    } catch {
+        Write-Error "Failed to restart trigger: $_ - Error: $_"
+    }
+}

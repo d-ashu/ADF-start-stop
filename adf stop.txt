@@ -1,0 +1,37 @@
+# Log in to Azure using service principal credentials stored in pipeline variables
+$spUsername = "$(SP_USERNAME)"
+$spPassword = "$(SP_PASSWORD)"
+$spTenant = "$(SP_TENANT)"
+az login --service-principal -u $spUsername -p $spPassword --tenant $spTenant
+
+# Define variables
+$resourceGroupName = "ops_analytics-rg-gb-qa"
+$dataFactoryName = "Ops-analytics-gac-product-qa"
+$tempFilePath = "$(Build.ArtifactStagingDirectory)\startedTriggers.txt"
+ 
+Write-Output "Fetching all triggers from Data Factory: $dataFactoryName in Resource Group: $resourceGroupName"
+$triggers = Get-AzDataFactoryV2Trigger -ResourceGroupName $resourceGroupName -DataFactoryName $dataFactoryName
+
+Write-Output "Total triggers found: $($triggers.Count)"
+ 
+# Filter started triggers
+$startedTriggers = $triggers | Where-Object { $_.Properties.RuntimeState -eq "Started" }
+
+Write-Output "Total started triggers found: $($startedTriggers.Count)"
+Write-Output "Started triggers:"
+$startedTriggers | ForEach-Object { Write-Output $_.Name }
+ 
+# Store names of started triggers to a file
+$startedTriggerNames = $startedTriggers.Name
+$startedTriggerNames | Out-File -FilePath $tempFilePath -Force
+
+# Stop Triggers at once
+$startedTriggerNames | ForEach-Object {
+    try {
+        Write-Output "Stopping trigger: $_"
+        Stop-AzDataFactoryV2Trigger -ResourceGroupName $resourceGroupName -DataFactoryName $dataFactoryName -Name $_ -Force
+        Write-Output "Successfully stopped trigger: $_"
+    } catch {
+        Write-Error "Failed to stop trigger: $_ - Error: $_"
+    }
+}
