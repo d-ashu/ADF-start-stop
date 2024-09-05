@@ -5,8 +5,8 @@ $spTenant = "$(SP_TENANT)"
 az login --service-principal -u $spUsername -p $spPassword --tenant $spTenant
 
 # Define variables
-$resourceGroupName = "ops_analytics-rg-gb-qa"
-$dataFactoryName = "Ops-analytics-gac-product-qa"
+$resourceGroupName = "rgname"
+$dataFactoryName = "adfname"
 $tempFilePath = "$(Build.ArtifactStagingDirectory)\startedTriggers.txt"
 
 # Read names of started triggers from the file
